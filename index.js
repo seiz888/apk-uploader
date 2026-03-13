@@ -12,6 +12,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 
 const app = express();
+app.set("trust proxy", 1); // trust Cloudflare/Railway proxy for correct protocol (https)
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "changeme";
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
@@ -160,7 +161,12 @@ app.get("/download/:filename", (req, res) => {
 
 // --- PUBLIC: API file list (JSON) ---
 app.get("/api/files", (req, res) => {
-  res.json({ files: getFileList() });
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  const files = getFileList().map(f => ({
+    ...f,
+    downloadUrl: `${baseUrl}${f.downloadUrl}`,
+  }));
+  res.json({ files, baseUrl });
 });
 
 // --- PRIVATE: Admin upload page ---
