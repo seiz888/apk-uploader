@@ -214,7 +214,8 @@ app.get("/admin", requireAuth, (req, res) => {
 
   <div class="upload-box">
     <form id="uploadForm" enctype="multipart/form-data">
-      <input type="file" id="fileInput" name="apk" accept=".apk" required /><br>
+      <input type="file" id="fileInput" name="apk" accept=".apk" multiple required /><br>
+      <small style="color:#8b949e">Select up to 10 .apk files at once</small><br><br>
       <button type="submit" class="btn">⬆️ Upload APK</button>
     </form>
     <div class="progress" id="progressWrap">
@@ -242,13 +243,15 @@ app.get("/admin", requireAuth, (req, res) => {
       if (!fileInput.files.length) return;
 
       const formData = new FormData();
-      formData.append("apk", fileInput.files[0]);
+      for (let i = 0; i < fileInput.files.length; i++) {
+        formData.append("apk", fileInput.files[i]);
+      }
 
       const statusEl = document.getElementById("status");
       const progressWrap = document.getElementById("progressWrap");
       const progressBar = document.getElementById("progressBar");
 
-      statusEl.innerHTML = "";
+      statusEl.innerHTML = '<div class="msg" style="background:#1c2333;color:#58a6ff;">⏳ Uploading ' + fileInput.files.length + ' file(s)...</div>';
       progressWrap.style.display = "block";
       progressBar.style.width = "0%";
 
@@ -267,8 +270,13 @@ app.get("/admin", requireAuth, (req, res) => {
         progressWrap.style.display = "none";
         if (xhr.status === 200) {
           const data = JSON.parse(xhr.responseText);
-          statusEl.innerHTML = '<div class="msg msg-ok">✅ Uploaded: ' + data.file.name + ' (' + data.file.sizeHuman + ')</div>';
-          setTimeout(() => location.reload(), 1500);
+          if (data.files) {
+            const list = data.files.map(f => '✅ ' + f.name + ' (' + f.sizeHuman + ')').join('<br>');
+            statusEl.innerHTML = '<div class="msg msg-ok">' + list + '</div>';
+          } else if (data.file) {
+            statusEl.innerHTML = '<div class="msg msg-ok">✅ ' + data.file.name + ' (' + data.file.sizeHuman + ')</div>';
+          }
+          setTimeout(() => location.reload(), 2000);
         } else {
           let msg = "Upload failed";
           try { msg = JSON.parse(xhr.responseText).error; } catch(e) {}
@@ -301,35 +309,44 @@ app.get("/admin", requireAuth, (req, res) => {
 </html>`);
 });
 
-// --- PRIVATE: Upload endpoint (API) ---
+// --- PRIVATE: Upload endpoint (API) — supports single & multi-file ---
 app.post("/upload", requireAuth, (req, res, next) => {
-  upload.single("apk")(req, res, (err) => {
+  upload.array("apk", 10)(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(413).json({ error: `File too large. Max ${MAX_FILE_SIZE / 1024 / 1024}MB` });
+        }
+        if (err.code === "LIMIT_UNEXPECTED_FILE") {
+          return res.status(400).json({ error: "Max 10 files per upload" });
         }
         return res.status(400).json({ error: err.message });
       }
       return res.status(400).json({ error: err.message });
     }
 
-    if (!req.file) {
+    const uploadedFiles = req.files || [];
+    if (uploadedFiles.length === 0) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const stat = fs.statSync(req.file.path);
-    console.log(`📦 Uploaded: ${req.file.filename} (${(stat.size / 1024 / 1024).toFixed(1)} MB)`);
-
-    res.json({
-      success: true,
-      file: {
-        name: req.file.filename,
+    const results = uploadedFiles.map((f) => {
+      const stat = fs.statSync(f.path);
+      console.log(`📦 Uploaded: ${f.filename} (${(stat.size / 1024 / 1024).toFixed(1)} MB)`);
+      return {
+        name: f.filename,
         size: stat.size,
         sizeHuman: (stat.size / (1024 * 1024)).toFixed(1) + " MB",
-        downloadUrl: `/download/${encodeURIComponent(req.file.filename)}`,
-      },
+        downloadUrl: `/download/${encodeURIComponent(f.filename)}`,
+      };
     });
+
+    // Backward compatible: single file returns "file", multi returns "files"
+    if (results.length === 1) {
+      res.json({ success: true, file: results[0] });
+    } else {
+      res.json({ success: true, count: results.length, files: results });
+    }
   });
 });
 
