@@ -206,6 +206,11 @@ app.get("/admin", requireAuth, (req, res) => {
     #status { margin-top: 10px; }
     .progress { width: 100%; height: 20px; background: #21262d; border-radius: 10px; overflow: hidden; margin-top: 10px; display: none; }
     .progress-bar { height: 100%; background: #238636; transition: width 0.3s; }
+    .file-row { margin: 6px 0; display: flex; align-items: center; gap: 8px; }
+    .file-num { color: #f0883e; font-weight: bold; min-width: 20px; }
+    .apk-input { flex: 1; }
+    .btn-add { background: #30363d; color: #58a6ff; border: 1px solid #58a6ff; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 8px; }
+    .btn-add:hover { background: #161b22; }
   </style>
 </head>
 <body>
@@ -214,9 +219,17 @@ app.get("/admin", requireAuth, (req, res) => {
 
   <div class="upload-box">
     <form id="uploadForm" enctype="multipart/form-data">
-      <input type="file" id="fileInput" name="apk" accept=".apk" multiple required /><br>
-      <small style="color:#8b949e">Select up to 10 .apk files at once</small><br><br>
-      <button type="submit" class="btn">⬆️ Upload APK</button>
+      <div id="fileInputs">
+        <div class="file-row"><span class="file-num">1.</span> <input type="file" name="apk" accept=".apk" class="apk-input" /></div>
+        <div class="file-row"><span class="file-num">2.</span> <input type="file" name="apk" accept=".apk" class="apk-input" /></div>
+        <div class="file-row"><span class="file-num">3.</span> <input type="file" name="apk" accept=".apk" class="apk-input" /></div>
+        <div class="file-row"><span class="file-num">4.</span> <input type="file" name="apk" accept=".apk" class="apk-input" /></div>
+        <div class="file-row"><span class="file-num">5.</span> <input type="file" name="apk" accept=".apk" class="apk-input" /></div>
+        <div class="file-row"><span class="file-num">6.</span> <input type="file" name="apk" accept=".apk" class="apk-input" /></div>
+      </div>
+      <button type="button" id="addMoreBtn" class="btn-add" onclick="addFileInput()">➕ Add more</button>
+      <br><br>
+      <button type="submit" class="btn">⬆️ Upload All APK</button>
     </form>
     <div class="progress" id="progressWrap">
       <div class="progress-bar" id="progressBar" style="width:0%"></div>
@@ -237,21 +250,34 @@ app.get("/admin", requireAuth, (req, res) => {
   <script>
     const TOKEN = "${token}";
 
+    let inputCount = 6;
+    function addFileInput() {
+      if (inputCount >= 10) { alert("Max 10 files"); return; }
+      inputCount++;
+      const div = document.createElement("div");
+      div.className = "file-row";
+      div.innerHTML = '<span class="file-num">' + inputCount + '.</span> <input type="file" name="apk" accept=".apk" class="apk-input" />';
+      document.getElementById("fileInputs").appendChild(div);
+    }
+
     document.getElementById("uploadForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const fileInput = document.getElementById("fileInput");
-      if (!fileInput.files.length) return;
-
+      const inputs = document.querySelectorAll(".apk-input");
       const formData = new FormData();
-      for (let i = 0; i < fileInput.files.length; i++) {
-        formData.append("apk", fileInput.files[i]);
-      }
+      let count = 0;
+      inputs.forEach(inp => {
+        if (inp.files && inp.files.length > 0) {
+          formData.append("apk", inp.files[0]);
+          count++;
+        }
+      });
+      if (count === 0) { alert("Pilih minimal 1 file .apk"); return; }
 
       const statusEl = document.getElementById("status");
       const progressWrap = document.getElementById("progressWrap");
       const progressBar = document.getElementById("progressBar");
 
-      statusEl.innerHTML = '<div class="msg" style="background:#1c2333;color:#58a6ff;">⏳ Uploading ' + fileInput.files.length + ' file(s)...</div>';
+      statusEl.innerHTML = '<div class="msg" style="background:#1c2333;color:#58a6ff;">⏳ Uploading ' + count + ' file(s)...</div>';
       progressWrap.style.display = "block";
       progressBar.style.width = "0%";
 
