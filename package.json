@@ -1,0 +1,13 @@
+{
+  "name": "apk-uploader",
+  "version": "1.0.0",
+  "description": "Web APK file uploader with public download for Termux/Lua tools",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}
