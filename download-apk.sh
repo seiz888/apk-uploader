@@ -6,7 +6,7 @@
 
 # === CONFIG ===
 # Ganti URL ini dengan URL server kamu (tunnel / railway domain)
-SERVER_URL="${APK_SERVER_URL:-https://midlands-critical-irrigation-champion.trycloudflare.com}"
+SERVER_URL="${APK_SERVER_URL:-https://apk-uploader-production.up.railway.app}"
 DEST_DIR="${APK_DEST_DIR:-/sdcard/Download}"
 MAX_RETRY=3
 
