@@ -146,6 +146,38 @@ app.get("/", (req, res) => {
 </html>`);
 });
 
+// --- PUBLIC: Plain index of all APK files at /download ---
+app.get("/download", (req, res) => {
+  const files = getFileList();
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+  const links = files
+    .map((f) => `<a href="${f.downloadUrl}">${f.name}</a> (${f.sizeHuman})`)
+    .join("<br>\n");
+
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Index of /download</title>
+  <style>
+    body { font-family: monospace; background: #fff; color: #333; padding: 20px; }
+    h1 { font-size: 18px; }
+    a { color: #0066cc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .file { margin: 4px 0; }
+    hr { border: none; border-top: 1px solid #ccc; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Index of /download</h1>
+  <hr>
+  ${files.length === 0 ? "<p>No files.</p>" : links}
+  <hr>
+  <p>${files.length} file(s)</p>
+</body>
+</html>`);
+});
+
 // --- PUBLIC: Direct file download (curl/wget friendly) ---
 app.get("/download/:filename", (req, res) => {
   const filename = decodeURIComponent(req.params.filename);
